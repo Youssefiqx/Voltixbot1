@@ -111,5 +111,5 @@ client.on('messageCreate', async message => {
     }
 });
 
-// ضع التوكن هنا لتشغيل البوت
-client.login('MTMwMTU1MTkyODkzMjgyNzE4MA.GLIyg9.NmNhHgBGc-xpsiM0oq_2g-OkbUiEU9CsCnU7oY');
+// استخدم السيكرت من environment variables
+client.login(process.env.TOKEN);
