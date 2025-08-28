@@ -1,115 +1,55 @@
-const { Client, GatewayIntentBits } = require('discord.js');
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
+const Discord = require('discord.js-selfbot-v13');
+const client = new Discord.Client({
+  readyStatus: false,
+  checkUpdate: false
 });
+//environment
+require('dotenv').config()
 
-// ====================================
-// إعدادات المالك
-// ضع هنا ID بتاعك
-const ownerID = '1220757608344850542';
-// ====================================
-
-const balances = new Map();
-const blacklist = new Set();
-
-function formatVolt(amount) {
-    if (amount >= 1_000_000) return (amount / 1_000_000).toFixed(1) + 'M';
-    if (amount >= 1_000) return (amount / 1_000).toFixed(0) + 'k';
-    return amount.toString();
+function formatTime() { 
+  const date = new Date();
+  const options = {
+    timeZone: 'America/New_York', 
+    hour12: true,
+    hour: 'numeric',
+    minute: 'numeric'
+  };
+  return new Intl.DateTimeFormat('en-US', options).format(date);
 }
+const express = require("express")
+const app = express();
+var listener = app.listen(process.env.PORT || 2000, function () {
+  console.log('Your app is listening on port ' + listener.address().port);
+});
+app.listen(() => console.log("I'm Ready To Work..! 24H"));
+app.get('/', (req, res) => {
+  res.send(`
+  <body>
+  <center><h1>Bot 24H ON!</h1></center
+  </body>`)
+});
+client.on('ready', async () => {
+  console.clear();
+  console.log(`${client.user.tag} - rich presence started!`);
 
-client.on('messageCreate', async message => {
-    if (message.author.bot) return;
+  const r = new Discord.RichPresence()
+    .setApplicationId('1265825059692609587')
+    .setType('PLAYING')
+    .setURL('https://www.twitch.tv/apparentlyjack_rl') 
+    .setState('Hey Nitro is here')
+    .setName('quaaxz')
+    .setDetails(`Nitro is now`)
+    .setStartTimestamp(Date.now())
+ .setAssetsLargeImage('https://media.discordapp.net/attachments/1041035673118965772/1270521845841657907/image_2.webp?ex=66b4012d&is=66b2afad&hm=c0fa475d23f70fc777bcea2e70d9682a9aedf2d565ae549e64552ac303361d2b&=&format=webp&width=696&height=379') //You can put links in tenor or discord and etc.
+    .setAssetsLargeText('Nitro') 
+    .setAssetsSmallImage('https://media.discordapp.net/attachments/1041035673118965772/1270522062095781990/checked.png?ex=66b40160&is=66b2afe0&hm=1413e3f740030479e77899e2e3bebeb05f97a80e7c0b828e6ec6e9012f86255d&=&format=webp&quality=lossless&width=768&height=768') //You can put links in tenor or discord and etc.
+    .setAssetsSmallText('Small Text') 
+    .addButton('Google', 'https://google.com');
 
-    const content = message.content.trim();
-    const prefix = 'v';
-    const blackPrefix = '!';
+  client.user.setActivity(r);
+  client.user.setPresence({ status: "dnd" }); //dnd, online, idle, offline
 
-    // ====================================
-    // أمر البلاك ليست !Vblack للمالك فقط
-    if (content.toLowerCase().startsWith(`${blackPrefix}vblack`) && message.author.id === ownerID) {
-        const target = message.mentions.users.first();
-        if (!target) return message.reply('حدد شخص');
-        blacklist.add(target.id);
-        return message.channel.send(`⚠️ ${target} تم إضافته للقائمة السوداء`);
-    }
-
-    if (!content.startsWith(prefix)) return;
-    if (blacklist.has(message.author.id)) return;
-
-    const args = content.slice(prefix.length).trim().split(/ +/g);
-    const command = args.shift()?.toLowerCase();
-    const target = message.mentions.users.first();
-
-    // ====================================
-    // عرض رصيد شخص آخر
-    if (target && !args[0]) {
-        const bal = balances.get(target.id) || 0;
-        return message.channel.send(`${target} رصيده: \`\`${formatVolt(bal)} volt\`\``);
-    }
-
-    // عرض رصيدك الخاص
-    if (!command) {
-        const bal = balances.get(message.author.id) || 0;
-        return message.channel.send(`${message.author}, رصيدك: \`\`${formatVolt(bal)} volt\`\``);
-    }
-
-    // ====================================
-    // إضافة أو خصم فلوس (مالك البوت فقط)
-    if ((command === 'add' || command === 'remove') && message.author.id === ownerID) {
-        const targetUser = message.mentions.users.first();
-        const amount = parseInt(args[1]);
-        if (!targetUser || !amount || amount <= 0) return message.reply('حدد شخص صحيح والمبلغ');
-
-        const current = balances.get(targetUser.id) || 0;
-
-        if (command === 'add') {
-            balances.set(targetUser.id, current + amount);
-            return message.channel.send(`✅ تم إضافة \`\`${formatVolt(amount)} volt\`\` لـ ${targetUser}`);
-        } else if (command === 'remove') {
-            const newBal = Math.max(current - amount, 0);
-            balances.set(targetUser.id, newBal);
-            return message.channel.send(`⚠️ تم خصم \`\`${formatVolt(amount)} volt\`\` من ${targetUser}`);
-        }
-    }
-
-    // ====================================
-    // تحويل فلوس
-    if (target && args[0] && !['add', 'remove'].includes(command)) {
-        const amount = parseInt(args[0]);
-        if (!amount || amount <= 0) return message.reply('حدد مبلغ صحيح للتحويل');
-
-        // شرط الحساب أكبر من شهر
-        const created = message.author.createdAt;
-        if (Date.now() - created.getTime() < 30 * 24 * 60 * 60 * 1000)
-            return message.reply('حسابك لازم يكون أكتر من شهر عشان تحول');
-
-        const senderBal = balances.get(message.author.id) || 0;
-        if (senderBal < amount) return message.reply('رصيدك مش كفاية');
-
-        const confirmMsg = await message.channel.send(
-            `${message.author}, هل انت متأكد انك عايز تحوّل \`\`${formatVolt(amount)} volt\`\` لـ ${target}? اكتب "نعم" للتأكيد`
-        );
-
-        const filter = m => m.author.id === message.author.id;
-        const collector = message.channel.createMessageCollector({ filter, time: 15000, max: 1 });
-
-        collector.on('collect', m => {
-            if (m.content.toLowerCase() === 'نعم') {
-                const targetBal = balances.get(target.id) || 0;
-                balances.set(message.author.id, senderBal - amount);
-                balances.set(target.id, targetBal + amount);
-                message.channel.send(`✅ تم تحويل \`\`${formatVolt(amount)} volt\`\` لـ ${target}`);
-            } else {
-                message.channel.send('❌ تم إلغاء التحويل');
-            }
-        });
-    }
 });
 
-// استخدم السيكرت من environment variables
-client.login(process.env.TOKEN);
+const mySecret = process.env['TOKEN'];
+client.login(mySecret);
